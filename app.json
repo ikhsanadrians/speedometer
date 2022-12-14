@@ -3,7 +3,7 @@
     "name": "speedometer",
     "slug": "speedometer",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "landscape",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -28,6 +28,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0ef631f2-8825-4651-95bc-a88c505a95f9"
+      }
+    },
+    "owner": "adrianikhsandev"
   }
 }
