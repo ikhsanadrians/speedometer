@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, View , Image,
-  Dimensions, ImageBackground} from 'react-native';
+  Dimensions, ImageBackground, Touchable,TouchableOpacity, Pressable} from 'react-native';
 import * as Battery from 'expo-battery';
+import { Modal } from 'react-native';
 import {Node,useState,useEffect} from 'react';
 import gambarSpedo from './assets/nativespedo.png';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,29 +13,19 @@ import { MaterialCommunityIcons , FontAwesome , AntDesign , FontAwesome5,Ionicon
 import gambarMobil from './assets/icons/car.png';
 import Bingkai from './assets/testing.png';
 import logointek from './assets/icons/logointek.png'
+import CarSide from './assets/carControl/carpallete.png';
 import BingkaiSpedo from './assets/background/update.png';
+import centercircle from './assets/background/circles.png';
 import background from './assets/background/fixwppb.png';
-
+import { Inter_100Thin } from '@expo-google-fonts/inter';
+import lampudepan from './assets/carControl/lampumenyala.png';
+import pintudepan from './assets/carControl/pintudepan.png';
+import pintubelakang from './assets/carControl/pintubelakang.png';
 
 
 
 const screenHeight = Dimensions.get('window').height;
 const screenWidth = Dimensions.get('window').width;
-
-
-
-var ws = new WebSocket('ws://172.16.2.70/ws');
-
-ws.onopen = (e) => {
-  console.log(e)
-  ws.onmessage = (e) => {
-    console.log(e.data)
-  }
-}
-
-
-
-// const StyledText = {{ title,}}
 
 
 state = {
@@ -44,6 +35,32 @@ state = {
 const App: () => Node = () => {
   const [seconds,setSeconds] = useState(0);
   const [dateState,setDateState] = useState("");
+  const [Blink,SetBlink] = useState("");
+  const [modalOpen,setModal] = useState(true);
+  const [jwsdata,setJwsData] = useState("");
+  const [opacityFDoor,SetFdoorOp] = useState(0);
+  const [opacityBDoor,SetBdoorOp] = useState(0);
+  const [opacityLamp,setLampOp] = useState(0);
+
+var ws = new WebSocket('ws://172.16.3.69/ws');
+
+ws.onopen = (e) => {
+  // getDataFromJws(e)
+  // ws.send("Hello World")
+  ws.onmessage = (e) => {
+    console.log(e.data)
+    setJwsData(e.data)
+  }
+}
+
+const changeModalVisible = (bool) => {
+    setModal(bool)
+  }
+
+  const setData = (data) => {
+    setChooseData(data)
+  }
+
   useEffect(() => {
     interval = setInterval(() => {
       setSeconds(seconds => seconds + 1);
@@ -51,6 +68,15 @@ const App: () => Node = () => {
     return () => clearInterval(interval);
   },[])
    
+  useEffect(() => {
+    const blinkInterval = setInterval(()=>{
+       SetBlink((Blink) => !Blink);
+    },900);
+    return () => {
+      clearInterval(blinkInterval)
+    }
+  },[])
+
   useEffect(() => {
   const timeInterval = setInterval(() => {
       setDateState(new Date().toLocaleTimeString());
@@ -109,6 +135,32 @@ const App: () => Node = () => {
     <ImageBackground source={background} style={styles.background} imageStyle={{
       resizeMode: 'stretch',opacity:0.5
     }}>
+      <Modal visible={modalOpen}>
+         <View style={styles.innerModal}>
+          <FontAwesome onPress={()=>setModal(false)} name="close" size={54} color="#3dacbd" style={{position:'absolute',top:20,right:20}}/>
+          <Text style={{color:'white'}}>{jwsdata}</Text>
+          <Image source={CarSide} style={{height:290,width:750}}>
+          </Image>
+          <TouchableOpacity style={{left:310,position:'absolute'}} onPress={() => opacityLamp==100? setLampOp(0) : setLampOp(100)}>
+          <Image source={lampudepan} style={{height:50,width:100,opacity:opacityLamp}}>
+          </Image>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={{left:500,top:145,position:'absolute'}} onPress={() => opacityFDoor==100? SetFdoorOp(0) : SetFdoorOp(100)}>
+          <Image source={pintudepan} style={{height:210,width:202,opacity:opacityFDoor}}/>
+          </TouchableOpacity>
+          <TouchableOpacity style={{left:680,top:143,position:'absolute'}} onPress={() => opacityBDoor==100? SetBdoorOp(0) : SetBdoorOp(100)}>
+          <Image source={pintubelakang} style={{height:210,width:202,opacity:opacityBDoor}}/>
+          </TouchableOpacity>
+        
+
+        
+          {/* <View className="lampuMenyala" style={{backgroundColor:"yellow",height:70,width:50,position:'absolute',right:300,top:268,zIndex:-10}}>
+          
+          </View> */}
+          {/* <Image source={sorotLampu} style={{height:80,width:120,position:'absolute',right:190,top:245,tintColor:'yellow',zIndex:-10}}></Image> */}
+        </View>
+      </Modal>
       <Image source={logointek} style={{height:45,width:200 ,position:'absolute',top:20,right:25}}></Image>
        <View style={{width:700,height:700,position:'relative',justifyContent:'center',alignItems:'center'}}>
       <Image source={BingkaiSpedo} style={{position:'absolute',height:650,width:700,top:75,zIndex:90}}></Image>
@@ -116,8 +168,12 @@ const App: () => Node = () => {
 
       </Image>
       <View style={{position:'absolute',flexDirection:"row",top:270}}>
-      <Entypo name="arrow-bold-left" size={50} color="#3dacbd" style={{paddingRight:120}}/>
-      <Entypo name="arrow-bold-right" size={50} color="#3dacbd" />
+        <TouchableOpacity onPress={() => {
+        alert("Hellow")
+      }} >
+      <Entypo name="arrow-bold-left" size={60} color={Blink ? "yellow" : "#17292C" } style={{paddingRight:120}}/>
+      </TouchableOpacity>
+      <Entypo name="arrow-bold-right" size={60} color="#3dacbd" />
       </View>
   
       <View style={styles.digitalspeed}>
@@ -143,8 +199,8 @@ const App: () => Node = () => {
     
      {/* <View style={{width:60,height:60,borderRadius:100,backgroundColor:'#05aca0',marginTop:290,position:'absolute'}}></View> */}
      </View>
-     <View style={styles.bulat}>
-     </View>
+     <Image source={centercircle} style={styles.bulat}>
+     </Image>
      <Image source={Bingkai} style={styles.bingkai}>
 
      </Image>
@@ -163,52 +219,56 @@ const App: () => Node = () => {
     
    </View>
    <View style={{position:'absolute',left:120,flexDirection:'row',alignItems:'center'}}>
+     <View>
+
+     </View>
+     <TouchableOpacity onPress={()=>changeModalVisible(true)}>
      <Image source={gambarMobil} style={{height:200,width:100,}}></Image>
+     </TouchableOpacity>
      <View>
      <MaterialCommunityIcons name="engine" size={40} color="#3dacbd" />
      <MaterialCommunityIcons name="car-brake-hold" size={40} color="#3dacbd" />
-     <MaterialCommunityIcons name="car-light-dimmed" size={40} color="#3dacbd" />
+     <MaterialCommunityIcons name="car-light-dimmed" size={40} color={opacityLamp==100 ? "yellow" : "#3dacbd"}  />
      <MaterialCommunityIcons name="air-conditioner" size={40} color="#3dacbd" />
      </View>
    </View>
-   <View  style={{position:'absolute',bottom:10, flexDirection:'row',zIndex:99}}>
-     <View style={{flexDirection:'row', alignItems:'center',marginLeft:20 , paddingHorizontal:10, paddingVertical:5, borderRadius:10,backgroundColor:'#1F2946'}}>
-     <FontAwesome5 name="road" size={24} color="white" />
-   <Text style={{color:'white',fontSize:20,fontFamily:'Exo',paddingLeft:10}}>
+  
+   <View style={{position:'absolute',top:10,left:10,flexDirection:'row',alignItems:'center'}}>
+   <View style={{flexDirection:'row',alignItems:'center',backgroundColor:'#1F2946', width:160,paddingHorizontal:10, paddingVertical:5,borderRadius:10,}}>
+    <Ionicons name="md-time-sharp" size={25} color="#3dacbd" />
+    <Text  style={{color:'#3dacbd',fontSize:22,fontFamily:'Exo',marginLeft:5}}>
+   {dateState}
+   </Text>
+    </View>
+    <View style={{flexDirection:'row', alignItems:'center',marginLeft:40 , paddingHorizontal:10, paddingVertical:5, borderRadius:10,backgroundColor:'#1F2946'}}>
+    <FontAwesome5 name="temperature-high" size={25} color="#3dacbd" />
+   <Text style={{ color:"#3dacbd", paddingLeft:10,fontSize:22, fontFamily:'Exo'}}>
+     27°C
+   </Text>
+   </View>
+   </View>
+   <View  style={{position:'absolute',bottom:10, left:10, flexDirection:'row',zIndex:99}}>
+     <View style={{flexDirection:'row', alignItems:'center',marginLeft:0 , paddingHorizontal:20,paddingVertical:5, borderRadius:10,backgroundColor:'#1F2946'}}>
+     <FontAwesome5 name="road" size={25} color="#3dacbd" />
+   <Text style={{color:'#3dacbd',fontSize:20,fontFamily:'Exo',paddingLeft:10}}>
     2,400 km
    </Text>
    </View>
    
-   
-   <View style={{flexDirection:'row', alignItems:'center',marginLeft:80 ,marginRight:40, paddingHorizontal:10, paddingVertical:5, borderRadius:10,backgroundColor:'#1F2946'}}>
-   <FontAwesome5 name="temperature-high" size={24} color="white" />
-   <Text style={{color:'white',fontSize:20,paddingLeft:10 ,fontFamily:'Exo'}}>
-    20°C
-   </Text>
-   </View>
+ 
   
-   <View style={{flexDirection:'row', alignItems:'center',marginLeft:40 , paddingHorizontal:10, paddingVertical:5, borderRadius:10,backgroundColor:'#1F2946'}}>
-   <MaterialCommunityIcons name="map-marker-distance" size={24} color="white" />
-   <Text  style={{color:'white', paddingLeft:10,fontSize:20, fontFamily:'Exo'}}>
+   <View style={{flexDirection:'row', alignItems:'center',marginLeft:30 , paddingHorizontal:10, paddingVertical:5, borderRadius:10,backgroundColor:'#1F2946'}}>
+   <MaterialCommunityIcons name="map-marker-distance" size={25} color="#3dacbd" />
+   <Text  style={{color:'#3dacbd', paddingLeft:10,fontSize:20, fontFamily:'Exo'}}>
      0.0 km
    </Text>
    </View>
    
    </View>
-   <View style={{flexDirection:'row',alignItems:'center',backgroundColor:'#1F2946',paddingHorizontal:10, position:'absolute',top:20,left:20, paddingVertical:5,borderRadius:10,}}>
-    <Ionicons name="md-time-sharp" size={25} color="#3dacbd" />
-    <Text  style={{color:'#3dacbd',fontSize:25,fontFamily:'Exo',marginLeft:5}}>
-   {dateState}
-   </Text>
-    </View>
+  
   </ImageBackground>
   );
 }
-
-
-
-
-
 
 const styles = StyleSheet.create({
   background : {
@@ -256,13 +316,19 @@ const styles = StyleSheet.create({
   borderRadius:100,
   top:300,
   width:60,
-  backgroundColor:'#173338',
  },
  bingkai : {
   position:'absolute',
   height:310,
   width:500,
   left:-130,
+},
+innerModal : {
+  justifyContent:'center',
+  width:'100%',
+  height:'100%',
+  alignItems:'center',
+  backgroundColor: '#020D2B',
 }
  
  
