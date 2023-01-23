@@ -4,12 +4,14 @@
     "slug": "speedometer",
     "version": "1.0.0",
     "orientation": "landscape",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logospedo.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/centerlogo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "height" : 10,
+      "width" : 10,           
+      "backgroundColor": "#161D3F"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -24,7 +26,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
-      }
+      },
+      "useNextNotificationsApi":true
     },
     "web": {
       "favicon": "./assets/favicon.png"
