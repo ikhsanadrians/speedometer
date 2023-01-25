@@ -11,9 +11,14 @@ import {
   TouchableOpacity,
   Pressable,
   Button,
+  Animated,
 } from "react-native";
+// import axios from 'react-native-axios';
+
+import { WebView } from 'react-native-webview';
+import moment from 'moment';
 import * as Battery from "expo-battery";
-import { Modal } from "react-native";
+import { Modal,Linking } from "react-native";
 import { Node, useState, useEffect, useRef } from "react";
 import gambarSpedo from "./assets/nativespedo.png";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,6 +32,7 @@ import {
   FontAwesome5,
   Ionicons,
   Fontisto,
+  MaterialIcons,
   Entypo,
 } from "@expo/vector-icons";
 import gambarMobil from "./assets/icons/car.png";
@@ -40,10 +46,13 @@ import { Inter_100Thin } from "@expo-google-fonts/inter";
 import lampudepan from "./assets/carControl/lampumenyala.png";
 import pintudepan from "./assets/carControl/pintudepan.png";
 import pintubelakang from "./assets/carControl/pintubelakang.png";
+import carside from "./assets/cars.png";
 // import * as Permissions from 'expo-permissions';
 import Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import ws from "ws";
+
+import * as Location from 'expo-location';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => {
@@ -53,9 +62,11 @@ Notifications.setNotificationHandler({
   },
 });
 
+
+
 const screenHeight = Dimensions.get("window").height;
 const screenWidth = Dimensions.get("window").width;
-
+const batteryLevel = new Animated.Value(0.7);
 // state = {
 //   batteryLevel: null,
 // };
@@ -64,7 +75,6 @@ const screenWidth = Dimensions.get("window").width;
 
 const App: () => Node = () => {
   const [seconds, setSeconds] = useState(0);
-  const [dateState, setDateState] = useState("");
   const [BlinkKiri, SetBlinkKiri] = useState(false);
   const [BlinkKanan, SetBlinkKanan] = useState("");
   const [modalOpen, setModal] = useState(false);
@@ -78,6 +88,10 @@ const App: () => Node = () => {
   const inputref = useRef(null);
   const [PopUpStatus, setPopUpStatus] = useState(false);
   const [wsRange, setWsRange] = useState(0);
+  const [currentDate, setCurrentDate] = useState('');
+  const [longitude,setLongitude] = useState('');
+  const [latidute,setLatidute] = useState(''); 
+  const [temp,setTemp] = useState(''); 
 
   const triggerNotifications = async () => {
     await Notifications.scheduleNotificationAsync({
@@ -89,6 +103,41 @@ const App: () => Node = () => {
       trigger: { seconds: 1 },
     });
   };
+
+  useEffect(() => {
+    (async () => {
+      
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setErrorMsg('Permission to access location was denied');
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+       setLatidute(location.coords.latitude);
+       setLongitude(location.coords.longitude);
+    })();
+
+  }, []);
+  
+  try {
+    console.log(`latidute : ${latidute} , longitude : ${longitude}, suhu: ${temp}` ); 
+  } catch {
+    console.log("tunggu,sedang fetch lokasi");
+  }
+  
+  useEffect(()=>{
+    const apiKey = "74891133a9af1c283f0c9f3a9a6a18c7";
+    fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${latidute}&lon=${longitude}&appid=${apiKey}&units=metric`
+    ).then(response => response.json())
+    .then(data=>{
+      setTemp(data.main.temp);
+    })
+    .catch(error=>console.log(error))
+  })
+
+
 
   useEffect(() => {
     const ws = new WebSocket("ws://192.168.0.104/ws");
@@ -126,6 +175,8 @@ const App: () => Node = () => {
     };
   }, []);
 
+
+
   // useEffect(() => {
   //   Permissions.getAsync(Permissions.NOTIFICATIONS).then((statusObj) => {
   //   if (statusObj.status !== "granted") {
@@ -146,6 +197,8 @@ const App: () => Node = () => {
   const setData = (data) => {
     setChooseData(data);
   };
+
+
 
   // useEffect(() => {
   //   interval = setInterval(() => {
@@ -173,12 +226,10 @@ const App: () => Node = () => {
   }, []);
 
   useEffect(() => {
-    const timeInterval = setInterval(() => {
-      setDateState(new Date().toLocaleTimeString());
-    }, 1000);
-    return () => {
-      clearInterval(timeInterval);
-    };
+    setInterval(function(){
+      let date = moment().utcOffset('+07:00').format(' HH:mm');
+      setCurrentDate(date);
+    },1000);
   }, []);
 
   //let toString = seconds.toString()
@@ -206,7 +257,7 @@ const App: () => Node = () => {
   // console.log(stringTint)
 
   const tintColour = {
-    tintColor: "#3dacbd",
+    tintColor: "#BCBCBC",
   };
 
   // let hasil = parsejson(message);
@@ -278,6 +329,16 @@ const App: () => Node = () => {
     }
   };
 
+
+  const setBatteryLevel = (level) => {
+    batteryLevel.setValue(level);
+}
+
+
+
+
+setBatteryLevel(100)
+
   const handleLamp = () => {
     if (opacityLamp === 100) {
       setLampOp(0);
@@ -308,9 +369,29 @@ const App: () => Node = () => {
       style={styles.background}
       imageStyle={{
         resizeMode: "stretch",
-        opacity: 0.5,
+        opacity: 0,
       }}
     >
+
+<View style={{top:20,right:15,position:'absolute',flexDirection:'row',alignItems:'center',justifyContent:'center'}}>
+  <View className="driving-mode" style={{
+      flexDirection:'row',
+  }}>
+    <View style={{}}>
+      <Text style={{color:"#d3d3d3",fontFamily:'Exo',fontSize:20}}>Eco</Text>
+    </View>
+    <View style={{marginLeft:10}}>
+      <Text style={{color:"#d3d3d3",fontFamily:'Exo',fontSize:20}}>Normal</Text>
+    </View>
+    <View style={{marginLeft:10}}> 
+      <Text style={{color:"#d3d3d3",fontFamily:'Exo',fontSize:20}}>Sport</Text>
+    </View>
+  </View>
+  <TouchableOpacity onPress={() => changeModalVisible(true)} style={{marginLeft:40}}>
+      <Image style={styles.carside} source={carside}>
+      </Image>
+  </TouchableOpacity>
+</View>
       <Modal visible={modalOpen}>
         <View style={styles.innerModal}>
           <View
@@ -383,16 +464,22 @@ const App: () => Node = () => {
         </View>
       </Modal>
 
-      <Image
-        source={logointek}
-        style={{
-          height: 45,
-          width: 200,
-          position: "absolute",
-          top: 20,
-          right: 25,
-        }}
-      ></Image>
+
+
+      <View style={styles.newbingkai}>
+      <WebView
+      style={{height:10,width:300,marginLeft:50}}
+      originWhitelist={['*']}
+      source={{  uri: 'https://www.waze.com/live-map'  }}
+      javaScriptEnabled={true}
+      domStorageEnabled={true}
+      allowsFullscreenVideo={true}
+      allowsInlineMediaPlayback={true}
+      startInLoadingState={true}
+      scalesPageToFit={true}
+      thirdPartyCookiesEnabled={true}
+    />
+      </View>
 
       <View
         style={{
@@ -402,8 +489,9 @@ const App: () => Node = () => {
           justifyContent: "center",
           alignItems: "center",
         }}
-      >
-        <Image
+      > 
+        
+        {/* <Image
           source={BingkaiSpedo}
           style={{
             position: "absolute",
@@ -412,7 +500,8 @@ const App: () => Node = () => {
             top: 75,
             zIndex: 90,
           }}
-        ></Image>
+        ></Image> */}
+    
         <Image source={gambarSpedo} style={[styles.images, tintColour]}></Image>
         <View style={{ position: "absolute", flexDirection: "row", top: 270 }}>
           <TouchableOpacity onPress={() => alert("Hello World")}>
@@ -432,7 +521,7 @@ const App: () => Node = () => {
 
         <View style={styles.digitalspeed}>
           {/* <MaterialCommunityIcons name="speedometer" size={24} color="white" /> */}
-          <Text style={{ color: "#3dacbd", fontSize: 30, fontFamily: "Exo" }}>
+          <Text style={{ color: "#d3d3d3", fontSize: 30, fontFamily: "Exo" }}>
             KM/H
           </Text>
         </View>
@@ -449,59 +538,115 @@ const App: () => Node = () => {
           style={[styles.circle, transform]}
         ></LinearGradient>
 
-        {/* <View style={[styles.circle,transform]}>
-     </View> */}
-
-        {/* <View style={{width:60,height:60,borderRadius:100,backgroundColor:'#05aca0',marginTop:290,position:'absolute'}}></View> */}
       </View>
+      
+      
       <Image source={centercircle} style={styles.bulat}></Image>
-      <Image source={Bingkai} style={styles.bingkai}></Image>
+      {/* <Image source={Bingkai} style={styles.bingkai}></Image> */}
       <View style={styles.vehicleStatus}>
         <Text style={{ color: "white" }}>Status Of Vehicle</Text>
       </View>
-      <Image
-        source={Bingkai}
-        style={{
-          right: -130,
-          position: "absolute",
-          height: 310,
-          width: 500,
-          transform: [{ scaleX: -1 }],
-        }}
-      ></Image>
-      <View style={{ position: "absolute", right: 70, alignItems: "center" }}>
-        <Text
+      <View style={styles.newbingkaikanan}>
+        <View style={{alignItems:'center'}} className="inner">
+      <Text style={{color:'white',top:20,position:'absolute',left:70,fontFamily:"Exo",fontSize:18}}>
+          Drive Info.
+      </Text>
+      <View style={{flexDirection:"row",justifyContent:'center',alignItems:'center',marginTop:70}}>
+      <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
+          }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
+          style={styles.infobadge}
+        >
+          <Text style={{color:'white',fontFamily:'Exo',fontSize:25}}>954</Text>
+          <Text style={{color:'white',fontFamily:'Exo',fontSize:15}}>min</Text>
+          <Ionicons name="time-outline" size={30} color="#B6B6B6" />
+        </LinearGradient>
+        <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
+          }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
+          style={styles.infobadge}
+        >
+          <Text style={{color:'white',fontFamily:'Exo',fontSize:25}}>1242</Text>
+          <Text style={{color:'white',fontFamily:'Exo',fontSize:15}}>KM</Text>
+          <MaterialCommunityIcons name="road-variant" size={30} color="#B6B6B6" />
+        </LinearGradient>
+        <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
+          }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
+          style={styles.infobadge}
+        >
+          <Text style={{color:'white',fontFamily:'Exo',fontSize:25}}>76</Text>
+          <Text style={{color:'white',fontFamily:'Exo',fontSize:15}}>KM</Text>
+          <MaterialIcons name="electrical-services" size={24} color="#B6B6B6" />
+        </LinearGradient>
+      </View> 
+      <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
+          }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
           style={{
-            color: "#3dacbd",
-            fontSize: 50,
-            top: -70,
-            right: 25,
-            position: "absolute",
-            fontFamily: "Exo",
+            width:'66%',
+            borderRadius:10,
+            height:'35%',
+            marginTop:15,
+            justifyContent:'center',
+            alignItems:'center',
+            flexDirection:'row',
           }}
         >
-          64%
-        </Text>
-        <View
-          style={{
-            position: "absolute",
-            right: 0,
-            flexDirection: "row",
-            alignItems: "center",
-          }}
-        >
-          <Fontisto name="battery-half" size={60} color="#3dacbd" />
-          <Text
-            style={{
-              color: "#3dacbd",
-              fontFamily: "Exo",
-              marginLeft: 10,
-              fontSize: 25,
-            }}
-          >
-            345 Km
-          </Text>
-        </View>
+            <Text style={{fontFamily:'Exo',color:'white',position:'absolute',top:5,}}>Battery Info</Text>
+          <Text style={{fontFamily:'Exo',color:'white',fontSize:30,marginRight:10}}>60%</Text>
+    
+     <Animated.View style={{
+  height: 40,
+  width: 100,
+  borderWidth: 1,
+  borderColor: 'white',
+  borderRadius:10,
+  overflow: 'hidden',
+}}>
+
+  <Animated.View style={{
+    height: batteryLevel.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 20],
+    }),
+    width: '99%',
+    backgroundColor: '#3dacbd',
+  }} />
+</Animated.View>
+
+</LinearGradient>
+
+</View>
+
       </View>
       <View
         style={{
@@ -512,148 +657,129 @@ const App: () => Node = () => {
         }}
       >
         <View></View>
-        <TouchableOpacity onPress={() => changeModalVisible(true)}>
+        {/* <TouchableOpacity onPress={() => changeModalVisible(true)}>
           <Image
             source={gambarMobil}
             style={{ height: 200, width: 100 }}
           ></Image>
         </TouchableOpacity>
-        <View>
-          <MaterialCommunityIcons name="engine" size={40} color="#3dacbd" />
+        */}
+      </View>
+      <View style={{bottom:15,position:'absolute',flexDirection:'row',right:55}}>
+      <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
+          }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
+          style={{justifyContent:'center',flexDirection:'row',alignItems:'center',marginLeft:20,paddingVertical:10, paddingHorizontal:20,borderRadius:10}}
+        >
+          <MaterialCommunityIcons name="engine" size={40} color="#d3d3d3" />
           <MaterialCommunityIcons
             name="car-brake-hold"
             size={40}
-            color="#3dacbd"
+            color="#d3d3d3"
+            style={{marginLeft:20}}
           />
           <MaterialCommunityIcons
             name="car-light-dimmed"
             size={40}
-            color={opacityLamp == 100 ? "yellow" : "#3dacbd"}
+            color={opacityLamp == 100 ? "yellow" : "#d3d3d3"}
+            style={{marginLeft:20}}
           />
           <MaterialCommunityIcons
             name="air-conditioner"
             size={40}
-            color="#3dacbd"
+            color="#d3d3d3"
+            style={{marginLeft:20}}
           />
+          </LinearGradient>
         </View>
-      </View>
-
       <View
         style={{
           position: "absolute",
-          top: 10,
-          left: 10,
+          top: 20,
+          left: 20,
           flexDirection: "row",
           alignItems: "center",
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            backgroundColor: "#1F2946",
-            width: 160,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 10,
+             <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
           }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
+          style={{justifyContent:'center',alignItems:'center',marginLeft:20,paddingVertical:5, paddingHorizontal:10,borderRadius:10}}
         >
-          <Ionicons name="md-time-sharp" size={25} color="#3dacbd" />
           <Text
             style={{
-              color: "#3dacbd",
+              color: "#d3d3d3",
               fontSize: 22,
               fontFamily: "Exo",
-              marginLeft: 5,
+            
             }}
           >
-            {dateState}
+            {currentDate}
           </Text>
-        </View>
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginLeft: 40,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 10,
-            backgroundColor: "#1F2946",
+          </LinearGradient>
+          <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
           }}
+          end={{
+            x: 1,
+            y: 1,
+          }}
+          style={{justifyContent:'center',alignItems:'center',marginLeft:20,paddingVertical:5, paddingHorizontal:10,borderRadius:10}}
         >
-          <FontAwesome5 name="temperature-high" size={25} color="#3dacbd" />
           <Text
             style={{
-              color: "#3dacbd",
-              paddingLeft: 10,
+              color: "#d3d3d3",
               fontSize: 22,
               fontFamily: "Exo",
             }}
           >
-            27°C
+            {`${parseInt(temp)}°c`}
           </Text>
-        </View>
+          </LinearGradient>
+        
       </View>
       <View
         style={{
           position: "absolute",
-          bottom: 10,
+          bottom:15,
           left: 10,
           flexDirection: "row",
           zIndex: 99,
         }}
       >
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginLeft: 0,
-            paddingHorizontal: 20,
-            paddingVertical: 5,
-            borderRadius: 10,
-            backgroundColor: "#1F2946",
+       <LinearGradient
+          colors={[ "#1D1D1D","#303030"]}
+          start={{
+            x: 0,
+            y: 0,
           }}
-        >
-          <FontAwesome5 name="road" size={25} color="#3dacbd" />
-          <Text
-            style={{
-              color: "#3dacbd",
-              fontSize: 20,
-              fontFamily: "Exo",
-              paddingLeft: 10,
-            }}
-          >
-            2,400 km
-          </Text>
-        </View>
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            marginLeft: 30,
-            paddingHorizontal: 10,
-            paddingVertical: 5,
-            borderRadius: 10,
-            backgroundColor: "#1F2946",
+          end={{
+            x: 1,
+            y: 1,
           }}
+          style={{justifyContent:'center',alignItems:'center',marginLeft:20,paddingVertical:5, paddingHorizontal:10,borderRadius:10}}
         >
-          <MaterialCommunityIcons
-            name="map-marker-distance"
-            size={25}
-            color="#3dacbd"
-          />
-          <Text
-            style={{
-              color: "#3dacbd",
-              paddingLeft: 10,
-              fontSize: 20,
-              fontFamily: "Exo",
-            }}
-          >
-            0.0 km
+          <Text style={{color:'#d3d3d3',fontFamily:'Exo',fontSize:20}}>
+            Rabu , 25 Januari 2023
           </Text>
-        </View>
+        </LinearGradient>
       </View>
     </ImageBackground>
   );
@@ -661,7 +787,7 @@ const App: () => Node = () => {
 
 const styles = StyleSheet.create({
   background: {
-    backgroundColor: "#020D2B",
+    backgroundColor: "#041119",
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
@@ -734,6 +860,67 @@ const styles = StyleSheet.create({
     color: "white",
     fontFamily: "Exo",
     fontSize: 50,
+  },
+  newbingkai: {
+     width:400,
+     height:350,
+     left:-15,
+     borderStyle:"solid",
+     position:'absolute',
+     borderColor:'#535353',
+     borderBottomWidth:4,
+     borderTopWidth:4,
+     borderTopRightRadius:50,
+     borderTopLeftRadius:50,
+     borderBottomRightRadius:50,
+     borderBottomLeftRadius:50,
+    },
+    newbingkaikanan: {
+      width:400,
+      height:350,
+      right:-15,
+      borderStyle:"solid",
+      position:'absolute',
+      borderColor:'#535353',
+      // borderRadius:200,
+      borderBottomWidth:4,
+      borderTopWidth:4,
+      borderTopRightRadius:50,
+      borderTopLeftRadius:10,
+      borderBottomRightRadius:50,
+      borderBottomLeftRadius:50,
+     },
+     infobadge:{
+      width:80,
+      borderRadius:10,
+      height:120,
+      marginLeft:10,
+      justifyContent:'center',
+      alignItems:'center',
+      backgroundColor:'white',
+
+     },
+     carside: {
+      height:55,
+      width:130,
+      tintColor:'#A6A6A6'
+     },
+     batteryContainer: {
+      width: 50,
+      height: 100,
+      alignItems: 'flex-end',
+      justifyContent: 'flex-end',
+  },
+  batteryOutline: {
+      width: 40,
+      height: 80,
+      borderWidth: 2,
+      borderColor: 'white',
+      borderRadius: 5,
+  },
+  batteryFill: {
+      backgroundColor: 'green',
+      borderRadius: 5,
   },
 });
 
